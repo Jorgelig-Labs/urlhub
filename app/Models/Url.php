@@ -21,6 +21,8 @@ class Url extends Model
 
     const GUEST_ID = null;
 
+    const GUEST_NAME = 'Guest';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -54,17 +56,17 @@ class Url extends Model
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function user()
+    public function author()
     {
-        return $this->belongsTo(User::class)->withDefault([
-            'name' => 'Guest',
+        return $this->belongsTo(User::class, 'user_id')->withDefault([
+            'name' => self::GUEST_NAME,
         ]);
     }
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function visit()
+    public function visits()
     {
         return $this->hasMany(Visit::class);
     }
@@ -145,10 +147,10 @@ class Url extends Model
      */
     public function numberOfClicks(int $urlId, bool $unique = false): int
     {
-        $total = self::find($urlId)->visit()->count();
+        $total = self::find($urlId)->visits()->count();
 
         if ($unique) {
-            $total = self::find($urlId)->visit()
+            $total = self::find($urlId)->visits()
                 ->whereIsFirstClick(true)
                 ->count();
         }
@@ -159,9 +161,11 @@ class Url extends Model
     /**
      * Total clicks on all short URLs on each user
      */
-    public function numberOfClicksPerUser(int $userId = null): int
+    public function numberOfClicksPerAuthor(): int
     {
-        $url = self::whereUserId($userId)->get();
+        // If the user is logged in, get the total clicks on all short URLs from the user
+        $authorId = auth()->check() ? auth()->id() : $this->author->id;
+        $url = self::whereUserId($authorId)->get();
 
         return $url->sum(fn ($url) => $url->numberOfClicks($url->id));
     }

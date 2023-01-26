@@ -17,12 +17,12 @@ class VisitTest extends TestCase
      * @test
      * @group u-model
      */
-    public function belongsToUrl()
+    public function belongsToUrlModel()
     {
-        $visit = Visit::factory()->create([
-            'url_id' => fn () => Url::factory()->create()->id,
-        ]);
+        $visit = Visit::factory()
+            ->create();
 
-        $this->assertTrue($visit->url()->exists());
+        $this->assertEquals(1, $visit->url->count());
+        $this->assertInstanceOf(Url::class, $visit->url);
     }
 }
