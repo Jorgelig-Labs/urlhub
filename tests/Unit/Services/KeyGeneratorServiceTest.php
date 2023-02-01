@@ -217,7 +217,7 @@ class KeyGeneratorServiceTest extends TestCase
 
         config(['urlhub.hash_length' => config('urlhub.hash_length') + 3]);
         $this->assertSame(0, $this->keyGeneratorService->usedCapacity());
-        $this->assertSame($this->totalUrl, $this->url->totalUrl());
+        $this->assertSame($this->totalUrl, $this->url->count());
     }
 
     /**
@@ -276,8 +276,8 @@ class KeyGeneratorServiceTest extends TestCase
     {
         $mock = \Mockery::mock(KeyGeneratorService::class)->makePartial();
         $mock->shouldReceive([
-            'maxCapacity' => $kc,
-            'usedCapacity'     => $ku,
+            'maxCapacity'  => $kc,
+            'usedCapacity' => $ku,
         ]);
         $actual = $mock->idleCapacity();
 
@@ -310,8 +310,8 @@ class KeyGeneratorServiceTest extends TestCase
         // https://ralphjsmit.com/laravel-mock-dependencies
         $mock = \Mockery::mock(KeyGeneratorService::class)->makePartial();
         $mock->shouldReceive([
-            'maxCapacity' => $kc,
-            'usedCapacity'     => $ku,
+            'maxCapacity'  => $kc,
+            'usedCapacity' => $ku,
         ]);
 
         $actual = $mock->idleCapacityInPercent();

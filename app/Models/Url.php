@@ -3,16 +3,21 @@
 namespace App\Models;
 
 use App\Models\Traits\Hashidable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int|null $user_id
- * @property string   $short_url
- * @property string   $destination
- * @property int      $clicks
- * @property int      $uniqueClicks
+ * @property User           $author
+ * @property Visit          $visits
+ * @property int|null       $user_id
+ * @property string         $short_url
+ * @property string         $destination
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon $updated_at
+ * @property int            $clicks
+ * @property int            $uniqueClicks
  */
 class Url extends Model
 {
@@ -58,9 +63,10 @@ class Url extends Model
      */
     public function author()
     {
-        return $this->belongsTo(User::class, 'user_id')->withDefault([
-            'name' => self::GUEST_NAME,
-        ]);
+        return $this->belongsTo(User::class, 'user_id')
+            ->withDefault([
+                'name' => self::GUEST_NAME,
+            ]);
     }
 
     /**
@@ -114,6 +120,20 @@ class Url extends Model
 
     /*
     |--------------------------------------------------------------------------
+    | SCOPES
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Scope a query to only include guest users.
+     */
+    public function scopeByGuests(Builder $query): Builder
+    {
+        return $query->whereNull('user_id');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | General Functions
     |--------------------------------------------------------------------------
     */
@@ -131,15 +151,7 @@ class Url extends Model
      */
     public function numberOfUrlsByGuests(): int
     {
-        return self::whereNull('user_id')->count();
-    }
-
-    /**
-     * Total shortened URLs created
-     */
-    public function totalUrl(): int
-    {
-        return self::count();
+        return self::byGuests()->count();
     }
 
     /**
@@ -147,10 +159,12 @@ class Url extends Model
      */
     public function numberOfClicks(int $urlId, bool $unique = false): int
     {
-        $total = self::find($urlId)->visits()->count();
+        /** @var self */
+        $self = self::find($urlId);
+        $total = $self->visits()->count();
 
-        if ($unique) {
-            $total = self::find($urlId)->visits()
+        if ($unique === true) {
+            $total = $self->visits()
                 ->whereIsFirstClick(true)
                 ->count();
         }
@@ -175,7 +189,7 @@ class Url extends Model
      */
     public function numberOfClicksFromGuests(): int
     {
-        $url = self::whereNull('user_id')->get();
+        $url = self::byGuests()->get();
 
         return $url->sum(fn ($url) => $url->numberOfClicks($url->id));
     }
