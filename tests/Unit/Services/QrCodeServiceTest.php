@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Actions;
+namespace Tests\Unit\Services;
 
 use App\Services\QrCodeService;
 use Endroid\QrCode\Writer\Result\ResultInterface;
@@ -52,5 +52,27 @@ class QrCodeServiceTest extends TestCase
 
         $this->assertNotSame($size, imagesx($image));
         $this->assertSame(QrCodeService::MAX_SIZE, imagesx($image));
+    }
+
+    /**
+     * resolveRoundBlockSize() should return \Endroid\QrCode\RoundBlockSizeMode\RoundBlockSizeModeNone
+     * if config('urlhub.qrcode_round_block_size') set `false`.
+     *
+     * @test
+     */
+    public function resolveRoundBlockSizeShouldReturnRoundBlockSizeModeNone(): void
+    {
+        config(['urlhub.qrcode_round_block_size' => false]);
+
+        $QrCode = $this->getQrCode();
+
+        $reflection = new \ReflectionClass($QrCode);
+        $method = $reflection->getMethod('resolveRoundBlockSize');
+        $method->setAccessible(true);
+
+        $this->assertInstanceOf(
+            \Endroid\QrCode\RoundBlockSizeMode\RoundBlockSizeModeNone::class,
+            $method->invoke($QrCode)
+        );
     }
 }
