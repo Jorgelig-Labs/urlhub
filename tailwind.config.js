@@ -3,14 +3,18 @@ module.exports = {
     "./resources/**/*.blade.php",
     "./resources/**/*.js",
     "./resources/**/*.vue",
-    "./app/Http/Livewire/**/*Table.php",
+    "./app/Livewire/**/*Table.php",
     "./vendor/power-components/livewire-powergrid/resources/views/**/*.php",
     "./vendor/power-components/livewire-powergrid/src/Themes/Tailwind.php",
+  ],
+  presets: [
+    require('./vendor/power-components/livewire-powergrid/tailwind.config.js'),
   ],
   theme: {
     extend: {
       colors: {
         "uh-blue": "#3d5b99",
+        "uh-blue-2": "#005a9e",
         "bg-primary": "#f8fafc",
         uh: {
           1: "#344767",

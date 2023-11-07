@@ -17,9 +17,8 @@ use Laravel\Sanctum\HasApiTokens;
  */
 class User extends Authenticatable
 {
-    use \App\Models\Traits\Hashidable;
-    use \Spatie\Permission\Traits\HasRoles;
     use HasApiTokens, HasFactory, Notifiable;
+    use \Spatie\Permission\Traits\HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -46,6 +45,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'password' => 'hashed',
     ];
 
     /*
@@ -74,10 +74,24 @@ class User extends Authenticatable
      */
     public function totalGuestUsers(): int
     {
-        $url = Url::select('ip', DB::raw('count(*) as total'))
-            ->byGuests()->groupBy('ip')
+        $url = Url::select('user_sign', DB::raw('count(*) as total'))
+            ->whereNull('user_id')->groupBy('user_sign')
             ->get();
 
         return $url->count();
+    }
+
+    public function signature(): string
+    {
+        if (auth()->check() === false) {
+            return hash('sha3-256', implode([
+                'ip'      => request()->ip(),
+                'browser' => \Browser::browserFamily(),
+                'os'      => \Browser::platformFamily(),
+                'device'  => \Browser::deviceFamily().\Browser::deviceModel(),
+            ]));
+        }
+
+        return (string) auth()->id();
     }
 }

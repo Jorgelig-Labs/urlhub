@@ -1,22 +1,20 @@
 <?php
 
-namespace App\Http\Livewire\Table;
+namespace App\Livewire\Table;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Str;
-use PowerComponents\LivewirePowerGrid\Traits\ActionButton;
 use PowerComponents\LivewirePowerGrid\{
-    Column, Footer, Header, PowerGrid, PowerGridComponent,PowerGridEloquent};
+    Column, Footer, Header, PowerGrid, PowerGridColumns, PowerGridComponent
+};
 
 /**
  * @codeCoverageIgnore
  */
 final class UserTable extends PowerGridComponent
 {
-    use ActionButton;
-
     public bool $showUpdateMessages = true;
 
     public string $sortDirection = 'desc';
@@ -54,33 +52,15 @@ final class UserTable extends PowerGridComponent
 
     /*
     |--------------------------------------------------------------------------
-    | Relationship Search
-    |--------------------------------------------------------------------------
-    | Configure here relationships to be used by the Search and Table Filters.
-    |
-    */
-
-    /**
-     * Relationship search.
-     *
-     * @return array<string, array<int, string>>
-     */
-    public function relationSearch(): array
-    {
-        return [];
-    }
-
-    /*
-    |--------------------------------------------------------------------------
     | Add Column
     |--------------------------------------------------------------------------
     | Make Datasource fields available to be used as columns.
     | You can pass a closure to transform/modify the data.
     |
     */
-    public function addColumns(): PowerGridEloquent
+    public function addColumns(): PowerGridColumns
     {
-        return PowerGrid::eloquent()
+        return PowerGrid::columns()
             ->addColumn('name', function (User $user) {
                 $urlCountTitle = $user->urls()->count().' '.Str::plural('url', $user->urls()->count()).' created';
 
@@ -95,13 +75,13 @@ final class UserTable extends PowerGridComponent
             })
             ->addColumn('action', function (User $user) {
                 return
-                    '<a role="button" href="'.route('user.edit', $user->name).'" title="'.__('Details').'"
-                        class="btn-icon btn-icon-table"
+                    '<a role="button" href="'.route('user.edit', $user).'" title="'.__('Details').'"
+                        class="btn btn-secondary btn-sm"
                     >'
                         .Blade::render('@svg(\'icon-user-edit\')').
                     '</a>
-                    <a role="button" href="'.route('user.change-password', $user->name).'" title="'.__('Change Password').'"
-                        class="btn-icon btn-icon-table"
+                    <a role="button" href="'.route('user.change-password', $user).'" title="'.__('Change Password').'"
+                        class="btn btn-secondary btn-sm"
                     >'
                         .Blade::render('@svg(\'icon-key\')').
                     '</a>';
@@ -125,27 +105,20 @@ final class UserTable extends PowerGridComponent
     public function columns(): array
     {
         return [
-            Column::add()
-                ->title('USERNAME')
-                ->field('name')
+            Column::make('USERNAME', 'name')
                 ->sortable()
                 ->searchable(),
 
-            Column::add()
-                ->title('EMAIL')
-                ->field('email')
+            Column::make('EMAIL', 'email')
                 ->sortable()
                 ->searchable(),
 
-            Column::add()
-                ->title('CREATED AT')
-                ->field('created_at_formatted', 'created_at')
+            Column::make('CREATED AT', 'created_at_formatted', 'created_at')
                 ->searchable()
                 ->sortable(),
 
-            Column::add()
-                ->title('ACTIONS')
-                ->field('action'),
+            Column::make('ACTIONS', 'action')
+                ->bodyAttribute(styleAttr: ';padding-left: 8px'),
         ];
     }
 }

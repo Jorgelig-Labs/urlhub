@@ -3,10 +3,16 @@
 namespace App\Services;
 
 use App\Models\Url;
+use App\Models\User;
 use App\Models\Visit;
 
 class VisitorService
 {
+    public function __construct(
+        public User $user,
+    ) {
+    }
+
     /**
      * Store the visitor data.
      *
@@ -21,55 +27,11 @@ class VisitorService
         }
 
         Visit::create([
-            'url_id'          => $url->id,
-            'visitor_id'      => $this->visitorId(),
-            'is_first_click'  => $this->isFirstClick($url),
-            'referer'         => request()->header('referer'),
-            'ip'              => request()->ip(),
-            'browser'         => \Browser::browserFamily(),
-            'browser_version' => \Browser::browserVersion(),
-            'device'          => \Browser::deviceType(),
-            'os'              => \Browser::platformFamily(),
-            'os_version'      => \Browser::platformVersion(),
+            'url_id'         => $url->id,
+            'visitor_id'     => $this->user->signature(),
+            'is_first_click' => $this->isFirstClick($url),
+            'referer'        => request()->header('referer'),
         ]);
-    }
-
-    /**
-     * Generate unique Visitor Id
-     */
-    public function visitorId(): string
-    {
-        $visitorId = $this->authVisitorId();
-
-        if ($this->isAnonymousVisitor()) {
-            $visitorId = $this->anonymousVisitorId();
-        }
-
-        return $visitorId;
-    }
-
-    public function authVisitorId(): string
-    {
-        return (string) auth()->id();
-    }
-
-    public function anonymousVisitorId(): string
-    {
-        $data = [
-            'ip'      => request()->ip(),
-            'browser' => \Browser::browserFamily(),
-            'os'      => \Browser::platformFamily(),
-        ];
-
-        return sha1(implode($data));
-    }
-
-    /**
-     * Check if the visitor is an anonymous (unauthenticated) visitor.
-     */
-    public function isAnonymousVisitor(): bool
-    {
-        return auth()->check() === false;
     }
 
     /**
@@ -81,7 +43,7 @@ class VisitorService
     public function isFirstClick(Url $url): bool
     {
         $hasVisited = $url->visits()
-            ->whereVisitorId($this->visitorId())
+            ->whereVisitorId($this->user->signature())
             ->exists();
 
         return $hasVisited ? false : true;
