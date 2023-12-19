@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 class KeyGeneratorService
 {
-    private const HASH_CHAR = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
     /**
      * Generate a short string that can be used as a unique key for the shortened
@@ -20,7 +20,7 @@ class KeyGeneratorService
         $key = $this->generateSimpleString($value);
 
         if (
-            $this->assertStringCanBeUsedAsKey($key) === false
+            $this->ensureStringCanBeUsedAsKey($key) === false
             || strlen($key) < config('urlhub.hash_length')
         ) {
             $key = $this->generateRandomString();
@@ -33,7 +33,7 @@ class KeyGeneratorService
     {
         return Str::of($value)
             // Remove all characters except `0-9a-z-AZ`
-            ->replaceMatches('/[^'.self::HASH_CHAR.']/i', '')
+            ->replaceMatches('/[^'.self::ALPHABET.']/i', '')
             // Take the specified number of characters from the end of the string.
             ->substr(config('urlhub.hash_length') * -1)
             ->lower();
@@ -43,18 +43,38 @@ class KeyGeneratorService
      * Generate a random string of specified length. The string will only contain
      * characters from the specified character set.
      *
-     * @return string The generated random string
+     * @return string The generated random string.
      */
     public function generateRandomString(): string
     {
-        $factory = new \RandomLib\Factory;
-        $generator = $factory->getMediumStrengthGenerator();
-
         do {
-            $urlKey = $generator->generateString(config('urlhub.hash_length'), self::HASH_CHAR);
-        } while ($this->assertStringCanBeUsedAsKey($urlKey) == false);
+            $urlKey = $this->getBytesFromString(self::ALPHABET, config('urlhub.hash_length'));
+        } while ($this->ensureStringCanBeUsedAsKey($urlKey) == false);
 
         return $urlKey;
+    }
+
+    /**
+     * Random\Randomizer::getBytesFromString
+     *
+     * https://www.php.net/manual/en/random-randomizer.getbytesfromstring.php
+     */
+    public function getBytesFromString(string $alphabet, int $length): string
+    {
+        if (\PHP_VERSION_ID < 80300) {
+            $stringLength = strlen($alphabet);
+
+            $result = '';
+            for ($i = 0; $i < $length; $i++) {
+                $result .= $alphabet[mt_rand(0, $stringLength - 1)];
+            }
+
+            return $result;
+        }
+
+        $randomizer = new \Random\Randomizer;
+
+        return $randomizer->getBytesFromString($alphabet, $length);
     }
 
     /**
@@ -68,9 +88,10 @@ class KeyGeneratorService
      * If any or all of the above conditions are met, then the string cannot be
      * used as a keyword and must return false.
      */
-    public function assertStringCanBeUsedAsKey(string $value): bool
+    public function ensureStringCanBeUsedAsKey(string $value): bool
     {
-        $route = array_map(fn (\Illuminate\Routing\Route $route) => $route->uri,
+        $route = array_map(
+            fn (\Illuminate\Routing\Route $route) => $route->uri,
             \Illuminate\Support\Facades\Route::getRoutes()->get()
         );
 
@@ -96,7 +117,7 @@ class KeyGeneratorService
      */
     public function possibleOutput(): int
     {
-        $nChar = strlen(self::HASH_CHAR);
+        $nChar = strlen(self::ALPHABET);
         $strLen= config('urlhub.hash_length');
 
         // for testing purposes only
@@ -111,27 +132,15 @@ class KeyGeneratorService
     /**
      * The number of unique keywords that have been used.
      *
-     * Formula:
-     * totalKey = randomKey + customKey
-     *
      * The length of the generated string (randomKey) and the length of the
      * `customKey` string must be identical.
      */
     public function totalKey(): int
     {
         $hashLength = (int) config('urlhub.hash_length');
-        $regexPattern = '['.self::HASH_CHAR.']{'.$hashLength.'}';
 
-        $randomKey = Url::whereIsCustom(false)
-            ->whereRaw('LENGTH(keyword) = ?', [$hashLength])
+        return Url::whereRaw('LENGTH(keyword) = ?', [$hashLength])
             ->count();
-
-        $customKey = Url::whereIsCustom(true)
-            ->whereRaw('LENGTH(keyword) = ?', [$hashLength])
-            ->whereRaw("keyword REGEXP '".$regexPattern."'")
-            ->count();
-
-        return $randomKey + $customKey;
     }
 
     /**
